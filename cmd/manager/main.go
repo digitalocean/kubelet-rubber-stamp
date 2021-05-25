@@ -18,6 +18,11 @@ import (
 	"github.com/kontena/kubelet-rubber-stamp/pkg/controller"
 )
 
+const (
+	leaderElectionNamespace = "kube-system"
+	leaderElectionConfigMap = "kubelet-rubber-stamp-leader-election"
+)
+
 func printVersion() {
 	klog.V(2).Infof("Go Version: %s", runtime.Version())
 	klog.V(2).Infof("Go OS/Arch: %s/%s", runtime.GOOS, runtime.GOARCH)
@@ -26,9 +31,11 @@ func printVersion() {
 
 func main() {
 	var metricsAddr string
+	var leaderElect bool
 
 	klog.InitFlags(nil)
 	flag.StringVar(&metricsAddr, "metrics-addr", "", fmt.Sprintf("The address the metric endpoint binds to, or \"0\" to disable (default: %s)", metrics.DefaultBindAddress))
+	flag.BoolVar(&leaderElect, "leader-elect", false, "Enable leader election")
 	flag.Set("logtostderr", "true")
 	flag.Set("v", "2")
 	flag.Parse()
@@ -57,8 +64,11 @@ func main() {
 
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(cfg, manager.Options{
-		Namespace: namespace,
-		MetricsBindAddress: metricsAddr,
+		Namespace:               namespace,
+		MetricsBindAddress:      metricsAddr,
+		LeaderElection:          leaderElect,
+		LeaderElectionNamespace: leaderElectionNamespace,
+		LeaderElectionID:        leaderElectionConfigMap,
 	})
 	if err != nil {
 		klog.Fatal(err)
