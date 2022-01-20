@@ -4,9 +4,11 @@ import (
 	"context"
 	"crypto/x509"
 	"fmt"
-	authorization "k8s.io/api/authorization/v1beta1"
-	capi "k8s.io/api/certificates/v1beta1"
+	authorization "k8s.io/api/authorization/v1"
+	capi "k8s.io/api/certificates/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
@@ -80,12 +82,12 @@ type ReconcileCertificateSigningRequest struct {
 // and what is in the CertificateSigningRequest.Spec
 // The Controller will requeue the Request to be processed again if the returned error is non-nil or
 // Result.Requeue is true, otherwise upon completion it will remove the work from the queue.
-func (r *ReconcileCertificateSigningRequest) Reconcile(request reconcile.Request) (reconcile.Result, error) {
+func (r *ReconcileCertificateSigningRequest) Reconcile(ctx context.Context, request reconcile.Request) (reconcile.Result, error) {
 	klog.V(2).Infof("Reconciling CertificateSigningRequest %s/%s", request.Namespace, request.Name)
 
 	// Fetch the CertificateSigningRequest instance
 	csr := &capi.CertificateSigningRequest{}
-	err := r.client.Get(context.TODO(), request.NamespacedName, csr)
+	err := r.client.Get(ctx, request.NamespacedName, csr)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			// Request object not found, could have been deleted after reconcile request.
@@ -121,7 +123,7 @@ func (r *ReconcileCertificateSigningRequest) Reconcile(request reconcile.Request
 			continue
 		}
 
-		approved, err := r.authorize(csr, recognizer.permission)
+		approved, err := r.authorize(ctx, csr, recognizer.permission)
 		if err != nil {
 			klog.Warningf("SubjectAccessReview failed: %s", err)
 			return reconcile.Result{}, err
@@ -130,7 +132,8 @@ func (r *ReconcileCertificateSigningRequest) Reconcile(request reconcile.Request
 		if approved {
 			klog.V(2).Infof("approving csr %s with SANs: %s, IP Addresses:%s", csr.ObjectMeta.Name, x509cr.DNSNames, x509cr.IPAddresses)
 			appendApprovalCondition(csr, recognizer.successMessage)
-			_, err = r.clientset.CertificatesV1beta1().CertificateSigningRequests().UpdateApproval(csr)
+			uo := metav1.UpdateOptions{}
+			_, err = r.clientset.CertificatesV1().CertificateSigningRequests().UpdateApproval(ctx, csr.ObjectMeta.Name, csr, uo)
 			if err != nil {
 				klog.Warningf("error updating approval for csr: %v", err)
 				return reconcile.Result{}, fmt.Errorf("error updating approval for csr: %v", err)
@@ -153,7 +156,7 @@ func (r *ReconcileCertificateSigningRequest) Reconcile(request reconcile.Request
 }
 
 // Validate that the given node has authorization to actualy create CSRs
-func (r *ReconcileCertificateSigningRequest) authorize(csr *capi.CertificateSigningRequest, rattrs authorization.ResourceAttributes) (bool, error) {
+func (r *ReconcileCertificateSigningRequest) authorize(ctx context.Context, csr *capi.CertificateSigningRequest, rattrs authorization.ResourceAttributes) (bool, error) {
 	extra := make(map[string]authorization.ExtraValue)
 	for k, v := range csr.Spec.Extra {
 		extra[k] = authorization.ExtraValue(v)
@@ -168,7 +171,9 @@ func (r *ReconcileCertificateSigningRequest) authorize(csr *capi.CertificateSign
 			ResourceAttributes: &rattrs,
 		},
 	}
-	sar, err := r.clientset.AuthorizationV1beta1().SubjectAccessReviews().Create(sar)
+
+	co := metav1.CreateOptions{}
+	sar, err := r.clientset.AuthorizationV1().SubjectAccessReviews().Create(ctx, sar, co)
 	if err != nil {
 		return false, err
 	}
@@ -178,6 +183,7 @@ func (r *ReconcileCertificateSigningRequest) authorize(csr *capi.CertificateSign
 func appendApprovalCondition(csr *capi.CertificateSigningRequest, message string) {
 	csr.Status.Conditions = append(csr.Status.Conditions, capi.CertificateSigningRequestCondition{
 		Type:    capi.CertificateApproved,
+		Status:  v1.ConditionTrue,
 		Reason:  "AutoApproved by kubelet-rubber-stamp",
 		Message: message,
 	})
