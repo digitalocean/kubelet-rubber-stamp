@@ -46,25 +46,6 @@ func parseCSR(obj *capi.CertificateSigningRequest) (*x509.CertificateRequest, er
 	return csr, nil
 }
 
-func hasExactUsages(csr *capi.CertificateSigningRequest, usages []capi.KeyUsage) bool {
-	if len(usages) != len(csr.Spec.Usages) {
-		return false
-	}
-
-	usageMap := map[capi.KeyUsage]struct{}{}
-	for _, u := range usages {
-		usageMap[u] = struct{}{}
-	}
-
-	for _, u := range csr.Spec.Usages {
-		if _, ok := usageMap[u]; !ok {
-			return false
-		}
-	}
-
-	return true
-}
-
 var kubeletServerUsages = []capi.KeyUsage{
 	capi.UsageKeyEncipherment,
 	capi.UsageDigitalSignature,
