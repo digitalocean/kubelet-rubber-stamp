@@ -4,11 +4,14 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"errors"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/klog"
 	"reflect"
 	"strings"
 
 	capi "k8s.io/api/certificates/v1"
+	_ "k8s.io/apimachinery/pkg/util/sets"
+	certificates "k8s.io/kubernetes/pkg/apis/certificates"
 )
 
 func getCertApprovalCondition(status *capi.CertificateSigningRequestStatus) (approved bool, denied bool) {
@@ -76,6 +79,15 @@ func isNodeServingCert(csr *capi.CertificateSigningRequest, x509cr *x509.Certifi
 	if (len(x509cr.DNSNames) < 1) || (len(x509cr.IPAddresses) < 1) {
 		return false
 	}
+
+	usages := sets.NewString()
+	for _, usage := range csr.Spec.Usages {
+		usages.Insert(string(usage))
+	}
+	if !certificates.IsKubeletServingCSR(x509cr, usages, true) {
+		return false
+	}
+
 	if !hasExactUsages(csr, kubeletServerUsages) {
 		klog.V(2).Info("Usage does not match")
 		return false
