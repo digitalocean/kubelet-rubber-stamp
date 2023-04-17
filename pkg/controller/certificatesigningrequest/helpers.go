@@ -88,10 +88,6 @@ func isNodeServingCert(csr *capi.CertificateSigningRequest, x509cr *x509.Certifi
 		return false
 	}
 
-	if !hasExactUsages(csr, kubeletServerUsages) {
-		klog.V(2).Info("Usage does not match")
-		return false
-	}
 	if !strings.HasPrefix(x509cr.Subject.CommonName, "system:node:") {
 		klog.Warningf("CN does not start with 'system:node': %s", x509cr.Subject.CommonName)
 		return false
