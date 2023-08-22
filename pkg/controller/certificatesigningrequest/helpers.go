@@ -65,7 +65,7 @@ func isNodeServingCert(csr *capi.CertificateSigningRequest, x509cr *x509.Certifi
 	for _, usage := range csr.Spec.Usages {
 		usages.Insert(string(usage))
 	}
-	if !certificates.IsKubeletServingCSR(x509cr, usages, true) {
+	if !certificates.IsKubeletServingCSR(x509cr, usages) {
 		return false
 	}
 

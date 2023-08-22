@@ -58,7 +58,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	}
 
 	// Watch for changes to primary resource CertificateSigningRequest
-	err = c.Watch(&source.Kind{Type: &capi.CertificateSigningRequest{}}, &handler.EnqueueRequestForObject{})
+	err = c.Watch(source.Kind(mgr.GetCache(), &capi.CertificateSigningRequest{}), &handler.EnqueueRequestForObject{})
 	if err != nil {
 		return err
 	}
