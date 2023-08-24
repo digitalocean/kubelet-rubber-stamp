@@ -8,10 +8,11 @@ import (
 
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/klog"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
-	"sigs.k8s.io/controller-runtime/pkg/metrics"
+	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	"github.com/kontena/kubelet-rubber-stamp/pkg/apis"
 	"github.com/kontena/kubelet-rubber-stamp/pkg/controller"
@@ -32,7 +33,7 @@ func main() {
 	var leaderElect bool
 
 	klog.InitFlags(nil)
-	flag.StringVar(&metricsAddr, "metrics-addr", "", fmt.Sprintf("The address the metric endpoint binds to, or \"0\" to disable (default: %s)", metrics.DefaultBindAddress))
+	flag.StringVar(&metricsAddr, "metrics-addr", "", fmt.Sprintf("The address the metric endpoint binds to, or \"0\" to disable (default: %s)", server.DefaultBindAddress))
 	flag.BoolVar(&leaderElect, "leader-elect", false, "Enable leader election")
 	flag.Set("logtostderr", "true")
 	flag.Set("v", "2")
@@ -55,7 +56,7 @@ func main() {
 
 	switch metricsAddr {
 	case "":
-		klog.V(2).Infof("Exposing metrics on %s", metrics.DefaultBindAddress)
+		klog.V(2).Infof("Exposing metrics on %s", server.DefaultBindAddress)
 	case "0":
 		klog.V(2).Info("Disabling metrics endpoint")
 	default:
@@ -64,8 +65,14 @@ func main() {
 
 	// Create a new Cmd to provide shared dependencies and start components
 	mgr, err := manager.New(cfg, manager.Options{
-		Namespace:               namespace,
-		MetricsBindAddress:      metricsAddr,
+		Cache: cache.Options{
+			DefaultNamespaces: map[string]cache.Config{
+				namespace: {},
+			},
+		},
+		Metrics: server.Options{
+			BindAddress: metricsAddr,
+		},
 		LeaderElection:          leaderElect,
 		LeaderElectionNamespace: leaderElectionNamespace,
 		LeaderElectionID:        leaderElectionConfigMap,
