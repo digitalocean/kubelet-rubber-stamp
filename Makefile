@@ -5,13 +5,13 @@ clean:
 
 .PHONY: build
 build: compile
-	@echo "==> Building docker image registry.digitalocean.com/ccp-infra/kubelet-rubber-stamp:$(VERSION)"
-	@docker build -t registry.digitalocean.com/ccp-infra/kubelet-rubber-stamp:$(VERSION)" .
+	@echo "==> Building docker image digitalocean/kubelet-rubber-stamp:$(VERSION)"
+	@docker build -t digitalocean/kubelet-rubber-stamp:$(VERSION)" .
 
 .PHONY: push
 push:
-	@echo "==> Publishing registry.digitalocean.com/ccp-infra/kubelet-rubber-stamp:$(VERSION)"
-	@docker push registry.digitalocean.com/ccp-infra/kubelet-rubber-stamp:$(VERSION)
-	@echo "==> Your image is now available at registry.digitalocean.com/ccp-infra/kubelet-rubber-stamp:$(VERSION)"
+	@echo "==> Publishing digitalocean/kubelet-rubber-stamp:$(VERSION)"
+	@docker push digitalocean/kubelet-rubber-stamp:$(VERSION)
+	@echo "==> Your image is now available at digitalocean/kubelet-rubber-stamp:$(VERSION)"
 
 publish: clean build push
