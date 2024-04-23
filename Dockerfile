@@ -1,4 +1,5 @@
-FROM golang:1.21 as builder
+ARG GOVERSION
+FROM golang:${GOVERSION} as builder
 
 WORKDIR  /src
 
