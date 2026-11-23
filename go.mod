@@ -1,6 +1,6 @@
 module github.com/kontena/kubelet-rubber-stamp
 
-go 1.21
+go 1.26.11
 
 require (
 	k8s.io/api v0.28.0
