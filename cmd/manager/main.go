@@ -6,10 +6,12 @@ import (
 	"os"
 	"runtime"
 
+	"github.com/go-logr/logr"
 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"
 	"k8s.io/klog"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/manager/signals"
 	"sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -38,6 +40,11 @@ func main() {
 	flag.Set("logtostderr", "true")
 	flag.Set("v", "2")
 	flag.Parse()
+
+	// This component logs through klog and has never used controller-runtime's
+	// own logger. Discard it explicitly, otherwise controller-runtime prints a
+	// "log.SetLogger(...) was never called" warning with a stack trace.
+	ctrllog.SetLogger(logr.Discard())
 
 	printVersion()
 
