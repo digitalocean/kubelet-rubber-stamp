@@ -1,6 +1,6 @@
 module github.com/kontena/kubelet-rubber-stamp
 
-go 1.26.11
+go 1.27.4
 
 require (
 	github.com/go-logr/logr v1.2.4
